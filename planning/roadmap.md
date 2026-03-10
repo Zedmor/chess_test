@@ -1,69 +1,70 @@
 # Roadmap
 
-## Phase 1: Core Data Structures
-Board representation + evaluation function. Two parallel tasks.
+## Phase 1: Board Representation — DONE (constants), IN PROGRESS (board)
+Foundation — everything depends on this.
 
-**Duration**: ~20 min per engineer (parallel)
+**Status**: constants.py is complete and merged to main. board.py + test_board.py is in progress (eng-1-2).
 
 ### Tasks
-1. **TASK-1**: `src/board.py` + `tests/test_board.py` — Board class, piece constants, FEN parsing, make_move, copy
-2. **TASK-2**: `src/evaluation.py` + `tests/test_evaluation.py` — Material values, PST tables, evaluate()
+1. **TASK-1**: `src/constants.py` — DONE. Merged to main.
+2. **TASK-2**: `src/board.py` + `tests/test_board.py` — IN PROGRESS (eng-1-2). Board class with FEN, make/unmake, is_attacked, game state queries, position history.
 
-**Milestone**: FEN round-trips work, evaluation of starting position ≈ 0
+**Milestone**: Board loads FEN, makes/unmakes moves correctly, detects attacks. FEN roundtrip test passes. Make/unmake with no corruption.
 
 ---
 
-## Phase 2: Move Generation + Search Framework
-Complete move generation and alpha-beta search. Two parallel tasks.
+## Phase 2: Move Generation + Evaluation + Move Ordering (parallel after Phase 1)
+Once board.py is merged, three tasks can run concurrently. Evaluation and move ordering depend only on constants.py + board.py — they do NOT need movegen. This allows maximum parallelism.
 
-**Duration**: ~25 min per engineer (parallel)
-**Depends on**: Phase 1 (both tasks merged to main)
+### Tasks (assign as soon as board.py is merged)
+3. **TASK-3**: `src/movegen.py` + `tests/test_movegen.py` — Pseudo-legal move generation (pawn pushes/captures/EP/promotion, knight, bishop, rook, queen, king, castling), legal move filtering, perft function, `generate_legal_captures()`. Tests MUST include perft validation against known values (starting position depth 1-4, Kiwipete depth 1-3). **CRITICAL PATH** — search depends on this.
+4. **TASK-4**: `src/evaluation.py` + `tests/test_evaluation.py` — Material values, PST tables, evaluate() returning centipawns from side-to-move perspective. Can use encode_move for test setup without movegen.
+5. **TASK-5**: `src/move_ordering.py` + `tests/test_move_ordering.py` — MVV-LVA capture scoring, killer move storage, order_moves and order_captures functions. Can use encode_move for test setup without movegen.
 
-### Tasks
-3. **TASK-3**: `src/moves.py` + `tests/test_moves.py` — All pseudo-legal move generation, attack detection, legal move filtering
-4. **TASK-4**: `src/search.py` + `tests/test_search.py` — Negamax alpha-beta, quiescence search, move ordering, iterative deepening, time management
+**Assignment strategy**: eng-1-1 gets movegen (critical path, largest task). eng-1-2 gets evaluation, then move_ordering sequentially (both are small).
 
-**Milestone**: Legal move generation passes perft(1) for starting position (20 moves). Search finds mate-in-1.
-
----
-
-## Phase 3: UCI Protocol + Perft Testing
-Wire everything together with UCI. Two parallel tasks.
-
-**Duration**: ~20 min per engineer (parallel)
-**Depends on**: Phase 2 (both tasks merged to main)
-
-### Tasks
-5. **TASK-5**: `src/uci.py` + `main.py` — UCI protocol loop, position/go/bestmove handling, move format conversion
-6. **TASK-6**: `tests/test_perft.py` — Perft test suite for move generation correctness (starting pos, kiwipete, other standard positions)
-
-**Milestone**: Engine responds to UCI commands. Perft results match known values.
+**Milestone**: Perft matches depth 4 starting position (197,281 nodes). Evaluation ~0 for starting position. Captures sorted by MVV-LVA.
 
 ---
 
-## Phase 4: Integration Testing & Bug Fixes
-End-to-end testing, fix move generation bugs found by perft, test edge cases.
-
-**Duration**: ~20 min per engineer (parallel)
-**Depends on**: Phase 3
+## Phase 3: Search Engine
+Depends on movegen + evaluation + move_ordering all being merged.
 
 ### Tasks
-7. **TASK-7**: Full game playthrough testing — play complete games via UCI, test checkmate/stalemate/draw detection, fix bugs
-8. **TASK-8**: Edge case testing — promotion in all variants, en passant edge cases, castling through/out of check, 50-move rule
+6. **TASK-6**: `src/search.py` + `tests/test_search.py` — Negamax alpha-beta, quiescence search, iterative deepening, time management.
 
-**Milestone**: Engine plays complete legal games without crashing or illegal moves.
+**Milestone**: Engine finds mate-in-1 and mate-in-2. Search reaches depth 4-5 in reasonable time (<5s).
 
 ---
 
-## Phase 5: Optimization & Tuning
-Only if not hitting 50% winrate vs Stockfish 1200.
-
-**Duration**: ~15 min per engineer
-**Depends on**: Phase 4
+## Phase 4: Opening Book + UCI Protocol (parallel)
+Two parallel tasks. Depends on search being merged.
 
 ### Tasks
-9. **TASK-9**: Transposition table (simple dict with Zobrist hashing)
-10. **TASK-10**: Move ordering improvements (killer moves, history heuristic)
-11. **TASK-11**: Time management tuning, PST value tuning
+7. **TASK-7**: `src/opening_book.py` + `tests/test_opening_book.py` — Hardcoded opening book (20-30 positions), book lookup function
+8. **TASK-8**: `src/uci.py` + `main.py` + `tests/test_uci.py` — UCI protocol loop, position/go/bestmove handling, book + search integration
 
-**Milestone**: ≥50% winrate vs Stockfish 1200 in 10-game match.
+**Milestone**: Engine responds correctly to UCI commands. Book moves returned for known positions. `python main.py` starts the engine.
+
+---
+
+## Phase 5: Integration Testing + Stockfish Match
+Full system testing and performance measurement.
+
+### Tasks
+9. **TASK-9**: Full game integration testing — play complete games via UCI, verify checkmate/stalemate/draw detection, fix bugs found
+10. **TASK-10**: Stockfish match — configure Stockfish at ~1200 ELO, play 20+ games, measure winrate. Target: ≥50%.
+
+**Milestone**: Engine plays complete legal games. ≥50% winrate vs Stockfish ~1200 ELO.
+
+---
+
+## Phase 6: Optimization (if needed)
+Only if not hitting 50% winrate target.
+
+### Tasks
+11. **TASK-11**: Transposition table (simple dict with Zobrist hashing)
+12. **TASK-12**: Search improvements (null move pruning, late move reductions)
+13. **TASK-13**: Evaluation improvements (mobility, pawn structure, king safety)
+
+**Milestone**: ≥50% winrate vs Stockfish 1200 in 20-game match.

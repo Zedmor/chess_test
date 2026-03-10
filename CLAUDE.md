@@ -1,10 +1,12 @@
 # Chess Engine — Project Conventions
 
 ## Tech Stack
-- Python 3.10+ (standard library only, no external chess libs)
+- Python 3.10+ (NO external packages — everything from scratch)
 - pytest for testing
+- Only Stockfish is installed externally (for match testing)
 
 ## Commands
+- Install test deps: `pip install pytest`
 - Run engine: `python main.py`
 - Run all tests: `python -m pytest tests/ -v`
 - Run single test file: `python -m pytest tests/test_board.py -v`
@@ -14,80 +16,126 @@
 ```
 src/
   __init__.py
-  board.py          # Board class, piece constants, FEN, make_move
-  moves.py          # Move generation, attack detection, legal moves
+  constants.py      # Piece/color/square constants, pre-computed tables, move encoding
+  board.py          # Board class: state, make/unmake, FEN, is_attacked
+  movegen.py        # Legal move generation, perft
   evaluation.py     # Material + PST evaluation
   search.py         # Alpha-beta, quiescence, iterative deepening
+  move_ordering.py  # MVV-LVA, killer moves, capture ordering
+  opening_book.py   # Hardcoded opening book
   uci.py            # UCI protocol handler
 main.py             # Entry point
 tests/
   __init__.py
   test_board.py
-  test_moves.py
+  test_movegen.py
   test_evaluation.py
   test_search.py
-  test_perft.py
+  test_move_ordering.py
+  test_opening_book.py
+  test_uci.py
 ```
 
-## Key Interfaces
+## Key Types
 
-### Piece Constants (defined in `src/board.py`, imported everywhere)
+### Piece Encoding (integers)
 ```python
 EMPTY = 0
-W_PAWN, W_KNIGHT, W_BISHOP, W_ROOK, W_QUEEN, W_KING = 1, 2, 3, 4, 5, 6
-B_PAWN, B_KNIGHT, B_BISHOP, B_ROOK, B_QUEEN, B_KING = -1, -2, -3, -4, -5, -6
-WHITE, BLACK = 0, 1
-CASTLING_WK, CASTLING_WQ, CASTLING_BK, CASTLING_BQ = 1, 2, 4, 8
+PAWN = 1; KNIGHT = 2; BISHOP = 3; ROOK = 4; QUEEN = 5; KING = 6
+WHITE = 0; BLACK = 1
+# White pieces: 1-6, Black pieces: 9-14
+# piece_type(p) = p & 7
+# piece_color(p) = p >> 3
+# make_piece(color, type) = type | (color << 3)
 ```
 
 ### Square Indexing
-- 64-element list, `sq = rank * 8 + file`
-- a1=0, b1=1, ..., h1=7, a2=8, ..., h8=63
-- `sq_rank(sq) = sq // 8`, `sq_file(sq) = sq % 8`
-
-### Move Format
-Tuple: `(from_sq: int, to_sq: int, promo: int)` where promo=0 for normal, piece type (2-5) for promotion.
-
-### Board Class (`src/board.py`)
-```python
-class Board:
-    squares: list[int]    # 64 elements
-    side_to_move: int     # WHITE or BLACK
-    castling: int         # bitmask: K=1, Q=2, k=4, q=8
-    ep_square: int        # en passant target or -1
-    halfmove: int
-    fullmove: int
-
-    @classmethod
-    def from_fen(cls, fen: str) -> "Board": ...
-    def to_fen(self) -> str: ...
-    def copy(self) -> "Board": ...
-    def make_move(self, move: tuple[int, int, int]) -> None: ...
+```
+a1=0, b1=1, ..., h1=7, a2=8, ..., h8=63
+rank(sq) = sq >> 3
+file(sq) = sq & 7
+mirror(sq) = sq ^ 56  (flip rank for black PST)
 ```
 
-### Function Signatures
+### Move Encoding (16-bit integer)
 ```python
-# evaluation.py
-def evaluate(board: Board) -> int:  # centipawns, side-to-move perspective
+# bits 0-5: from_sq, bits 6-11: to_sq, bits 12-15: flags
+encode_move(from_sq, to_sq, flags) -> int
+decode_from(move) -> int
+decode_to(move) -> int
+decode_flags(move) -> int
+is_capture(move) -> bool
+is_promotion(move) -> bool
+```
 
-# moves.py
-def generate_legal_moves(board: Board) -> list[tuple[int, int, int]]: ...
-def is_in_check(board: Board, color: int) -> bool: ...
-def is_square_attacked(board: Board, sq: int, by_color: int) -> bool: ...
+### Board Class
+```python
+from src.board import Board
+board = Board()                    # starting position
+board = Board("fen string here")   # from FEN
+board.make_move(move)              # apply move
+board.unmake_move()                # undo last move
+board.is_attacked(sq, by_color)    # attack detection
+board.is_in_check()                # current side in check?
+board.get_fen()                    # current FEN string
+board.get_position_fen()           # FEN without move counters (for book/repetition)
+```
+
+## Function Signatures
+```python
+# constants.py
+def encode_move(from_sq: int, to_sq: int, flags: int = 0) -> int: ...
+def decode_from(move: int) -> int: ...
+def decode_to(move: int) -> int: ...
+def decode_flags(move: int) -> int: ...
+def is_capture(move: int) -> bool: ...
+def is_promotion(move: int) -> bool: ...
+def promo_piece_type(move: int) -> int: ...
+def move_to_uci(move: int) -> str: ...
+def parse_uci_move(board, uci_str: str) -> int: ...
+
+# board.py
+class Board:
+    def __init__(self, fen: str | None = None): ...
+    def set_fen(self, fen: str) -> None: ...
+    def get_fen(self) -> str: ...
+    def get_position_fen(self) -> str: ...
+    def make_move(self, move: int) -> None: ...
+    def unmake_move(self) -> None: ...
+    def is_attacked(self, sq: int, by_color: int) -> bool: ...
+    def is_in_check(self) -> bool: ...
+
+# movegen.py
+def generate_legal_moves(board: Board) -> list[int]: ...
+def generate_legal_captures(board: Board) -> list[int]: ...
+def perft(board: Board, depth: int) -> int: ...
+
+# evaluation.py
+MATE_SCORE = 100000
+def evaluate(board: Board) -> int: ...  # centipawns, side-to-move perspective
+
+# move_ordering.py
+def order_moves(moves: list[int], board: Board,
+                killer_moves: list, depth: int) -> None: ...  # in-place sort
+def order_captures(moves: list[int], board: Board) -> None: ...  # in-place sort
 
 # search.py
-def search(board: Board, time_limit: float) -> tuple[int, int, int]: ...
+def search(board: Board, time_limit: float) -> int: ...  # returns encoded move
+
+# opening_book.py
+def get_book_move(board: Board) -> int | None: ...
 
 # uci.py
 def uci_loop() -> None: ...
 ```
 
 ## Coding Rules
-- No external dependencies (no python-chess, no numpy)
+- **ZERO external dependencies** — no pip packages, everything from scratch
+- Board state: 64-element list of ints, make/unmake with undo stack
+- Moves: 16-bit integers (encode_move/decode_from/decode_to/decode_flags)
+- Use `board.make_move()`/`board.unmake_move()` — no copy-make
 - Type hints on all function signatures
-- Use constants from `src/board.py` — never magic numbers for pieces
 - Keep functions under 50 lines
-- No classes except Board
-- Copy-make in search: `board.copy()` then `make_move()`, no unmake
 - Tests required for every module — untested code will be rejected
-- See `planning/architecture.md` for full design spec and PST values
+- Perft tests are mandatory for movegen — must match known values
+- See `planning/architecture.md` for full design spec, PST values, and algorithms
