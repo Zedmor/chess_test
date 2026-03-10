@@ -472,6 +472,18 @@ def test_is_attacked_by_queen() -> None:
     assert board.is_attacked(3, WHITE)   # d1
 
 
+def test_is_attacked_by_king() -> None:
+    """King attacks all 8 adjacent squares."""
+    fen = "4k3/8/8/8/3K4/8/8/8 w - - 0 1"
+    board = Board(fen)
+    # King on d4 (sq 27). Attacks all 8 neighbors:
+    # c3(18), d3(19), e3(20), c4(26), e4(28), c5(34), d5(35), e5(36)
+    for sq in (18, 19, 20, 26, 28, 34, 35, 36):
+        assert board.is_attacked(sq, WHITE), f"sq {sq} should be attacked by king"
+    # Non-adjacent square should not be attacked
+    assert not board.is_attacked(45, WHITE)  # f6 — not adjacent
+
+
 # -----------------------------------------------------------------------
 # 11. is_in_check
 # -----------------------------------------------------------------------
@@ -642,6 +654,13 @@ def test_is_insufficient_material_kb_vs_k() -> None:
     fen = "4k3/8/8/8/8/4B3/8/4K3 w - - 0 1"
     board = Board(fen)
     assert board.is_insufficient_material()
+
+
+def test_is_insufficient_material_kr_vs_k_is_not_draw() -> None:
+    """K+R vs K is NOT insufficient material."""
+    fen = "4k3/8/8/8/8/4R3/8/4K3 w - - 0 1"
+    board = Board(fen)
+    assert not board.is_insufficient_material()
 
 
 def test_is_not_insufficient_material() -> None:
