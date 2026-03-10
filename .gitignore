@@ -3,3 +3,5 @@ __pycache__/
 *.pyc
 .batty/daemon.log
 .batty/daemon.pid
+.batty/team_config/commands.jsonl
+.batty/team_config/events.jsonl
