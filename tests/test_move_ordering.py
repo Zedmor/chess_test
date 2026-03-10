@@ -1,144 +1,180 @@
 """Tests for move ordering: MVV-LVA and killer moves."""
 
-import pytest
-
-from src.board import (
-    EMPTY, W_PAWN, W_KNIGHT, W_ROOK, W_QUEEN,
-    B_PAWN, B_KNIGHT, B_QUEEN, WHITE, Board,
+from src.constants import (
+    EMPTY, PAWN, KNIGHT, QUEEN,
+    WHITE_PAWN, WHITE_KNIGHT, WHITE_QUEEN,
+    BLACK_PAWN, BLACK_QUEEN,
+    CAPTURE, QUIET, EP_CAPTURE,
+    encode_move,
 )
+from src.board import Board
 from src.move_ordering import (
     MVV_LVA_SCORES,
     create_killer_table,
     update_killers,
     order_moves,
     order_captures,
-    _is_capture,
 )
 
 
-def _make_board() -> Board:
-    """Return an empty board with white to move."""
-    return Board()
+# Square indices: a1=0, b1=1, ..., h1=7, a2=8, ..., h8=63
+E2 = 12
+E3 = 20
+E4 = 28
+D5 = 35
+E5 = 36
+D4 = 27
+C3 = 18
+A2 = 8
+A3 = 16
+D6 = 43
 
 
-class TestCapturesBeforeNonCaptures:
-    def test_captures_before_non_captures(self) -> None:
-        """After ordering, all captures come before non-captures."""
-        board = _make_board()
-        # White pawn on e4 (sq 28), black pawn on d5 (sq 35)
-        # White pawn on e2 (sq 12) for a quiet push
-        board.squares[28] = W_PAWN
-        board.squares[35] = B_PAWN
-        board.squares[12] = W_PAWN
-
-        capture = (28, 35, 0)   # pawn takes pawn
-        quiet = (12, 20, 0)     # pawn push e2-e3
-        moves = [quiet, capture]
-
-        killers = create_killer_table()
-        ordered = order_moves(moves, board, killers, 0)
-
-        assert ordered[0] == capture
-        assert ordered[1] == quiet
-
-
-class TestMvvLvaQueenCaptureFirst:
-    def test_mvv_lva_queen_capture_first(self) -> None:
-        """Capturing a queen is ranked higher than capturing a pawn."""
-        board = _make_board()
-        # White pawn on d4 (sq 27), black queen on e5 (sq 36)
-        # White knight on c3 (sq 18), black pawn on d5 (sq 35)
-        board.squares[27] = W_PAWN
-        board.squares[36] = B_QUEEN
-        board.squares[18] = W_KNIGHT
-        board.squares[35] = B_PAWN
-
-        pawn_takes_queen = (27, 36, 0)   # PxQ: 900*10 - 100 = 8900
-        knight_takes_pawn = (18, 35, 0)   # NxP: 100*10 - 320 = 680
-
-        killers = create_killer_table()
-        ordered = order_moves(
-            [knight_takes_pawn, pawn_takes_queen], board, killers, 0
-        )
-
-        assert ordered[0] == pawn_takes_queen
-        assert ordered[1] == knight_takes_pawn
-
-    def test_mvv_lva_scores_precomputed(self) -> None:
-        """MVV-LVA table has correct scores for key pairs."""
+# ------------------------------------------------------------------ MVV-LVA
+class TestMvvLva:
+    def test_pxq_ranked_before_qxp(self) -> None:
+        """PxQ has higher MVV-LVA score than QxP."""
         # PxQ = 900*10 - 100 = 8900
-        assert MVV_LVA_SCORES[(5, 1)] == 8900
-        # NxP = 100*10 - 320 = 680
-        assert MVV_LVA_SCORES[(1, 2)] == 680
-        # QxQ = 900*10 - 900 = 8100
-        assert MVV_LVA_SCORES[(5, 5)] == 8100
+        # QxP = 100*10 - 900 = 100
+        assert MVV_LVA_SCORES[(QUEEN, PAWN)] > MVV_LVA_SCORES[(PAWN, QUEEN)]
+        assert MVV_LVA_SCORES[(QUEEN, PAWN)] == 8900
+        assert MVV_LVA_SCORES[(PAWN, QUEEN)] == 100
+
+    def test_capture_ordering_by_victim_value(self) -> None:
+        """Captures sorted: PxQ before NxP in order_moves."""
+        board = Board("4k3/8/8/3qp3/3PN3/8/8/4K3 w - - 0 1")
+        # White pawn d4=27 captures black queen d5=35
+        pxq = encode_move(D4, D5, CAPTURE)
+        # White knight e4=28 captures black pawn e5=36
+        nxp = encode_move(E4, E5, CAPTURE)
+
+        moves = [nxp, pxq]
+        killers = create_killer_table()
+        order_moves(moves, board, killers, 0)
+
+        assert moves[0] == pxq
+        assert moves[1] == nxp
+
+    def test_mvv_lva_precomputed_scores(self) -> None:
+        """Key MVV-LVA scores are correctly pre-computed."""
+        assert MVV_LVA_SCORES[(QUEEN, PAWN)] == 8900   # PxQ
+        assert MVV_LVA_SCORES[(PAWN, KNIGHT)] == 680    # NxP
+        assert MVV_LVA_SCORES[(QUEEN, QUEEN)] == 8100   # QxQ
 
 
-class TestKillerMovesAfterCaptures:
-    def test_killer_moves_after_captures(self) -> None:
-        """Killer moves sorted between captures and quiet moves."""
-        board = _make_board()
-        board.squares[28] = W_PAWN
-        board.squares[35] = B_PAWN
-        board.squares[12] = W_PAWN
-        board.squares[8] = W_PAWN
+# ------------------------------------------------------ Captures before quiet
+class TestCapturesBeforeQuiet:
+    def test_captures_sorted_before_quiet_moves(self) -> None:
+        """After ordering, captures come before non-captures."""
+        board = Board("4k3/8/8/3p4/4P3/8/P7/4K3 w - - 0 1")
+        # White pawn e4=28 captures black pawn d5=35
+        capture = encode_move(E4, D5, CAPTURE)
+        # White pawn a2=8 pushes to a3=16
+        quiet = encode_move(A2, A3, QUIET)
 
-        capture = (28, 35, 0)
-        killer_move = (12, 20, 0)
-        quiet = (8, 16, 0)
+        moves = [quiet, capture]
+        killers = create_killer_table()
+        order_moves(moves, board, killers, 0)
+
+        assert moves[0] == capture
+        assert moves[1] == quiet
+
+
+# ------------------------------------------------- Killers before other quiet
+class TestKillerMoves:
+    def test_killer_before_other_quiet(self) -> None:
+        """Killer moves are ordered between captures and quiet moves."""
+        board = Board("4k3/8/8/3p4/4P3/8/P3P3/4K3 w - - 0 1")
+        capture = encode_move(E4, D5, CAPTURE)
+        killer = encode_move(E2, E3, QUIET)
+        quiet = encode_move(A2, A3, QUIET)
 
         killers = create_killer_table()
-        killers[0][0] = killer_move
+        killers[0][0] = killer
 
-        ordered = order_moves([quiet, killer_move, capture], board, killers, 0)
+        moves = [quiet, killer, capture]
+        order_moves(moves, board, killers, 0)
 
-        assert ordered[0] == capture
-        assert ordered[1] == killer_move
-        assert ordered[2] == quiet
+        assert moves[0] == capture
+        assert moves[1] == killer
+        assert moves[2] == quiet
 
-    def test_second_killer_after_first(self) -> None:
-        """Second killer slot has lower priority than first."""
-        board = _make_board()
-        board.squares[8] = W_PAWN
-        board.squares[12] = W_PAWN
-        board.squares[16] = W_PAWN
+    def test_first_killer_before_second(self) -> None:
+        """First killer slot has higher priority than second."""
+        board = Board("4k3/8/8/8/8/8/P3P3/4K3 w - - 0 1")
+        killer1 = encode_move(A2, A3, QUIET)
+        killer2 = encode_move(E2, E3, QUIET)
+        quiet = encode_move(E2, E4, QUIET)  # just another quiet move
 
-        killer1 = (8, 16, 0)
-        killer2 = (12, 20, 0)
-        quiet = (16, 24, 0)
-
-        # Manually set both pieces on destination to EMPTY (non-captures)
         killers = create_killer_table()
         killers[0][0] = killer1
         killers[0][1] = killer2
 
-        ordered = order_moves([quiet, killer2, killer1], board, killers, 0)
+        moves = [quiet, killer2, killer1]
+        order_moves(moves, board, killers, 0)
 
-        assert ordered[0] == killer1
-        assert ordered[1] == killer2
-        assert ordered[2] == quiet
+        assert moves[0] == killer1
+        assert moves[1] == killer2
+        assert moves[2] == quiet
 
 
+# ------------------------------------------------ order_moves modifies in-place
+class TestInPlaceSort:
+    def test_order_moves_in_place(self) -> None:
+        """order_moves modifies the list in-place and returns None."""
+        board = Board("4k3/8/8/3p4/4P3/8/P7/4K3 w - - 0 1")
+        capture = encode_move(E4, D5, CAPTURE)
+        quiet = encode_move(A2, A3, QUIET)
+
+        moves = [quiet, capture]
+        result = order_moves(moves, board, create_killer_table(), 0)
+
+        assert result is None
+        assert moves[0] == capture
+
+    def test_order_captures_in_place(self) -> None:
+        """order_captures modifies the list in-place and returns None."""
+        board = Board("4k3/8/8/3qp3/3PN3/8/8/4K3 w - - 0 1")
+        pxq = encode_move(D4, D5, CAPTURE)
+        nxp = encode_move(E4, E5, CAPTURE)
+
+        moves = [nxp, pxq]
+        result = order_captures(moves, board)
+
+        assert result is None
+        assert moves[0] == pxq
+        assert moves[1] == nxp
+
+
+# ------------------------------------------------ update_killers
 class TestUpdateKillers:
-    def test_update_killers(self) -> None:
-        """Inserting a killer shifts the old one to slot [1]."""
+    def test_insert_killer(self) -> None:
+        """First killer goes to slot [0]."""
         killers = create_killer_table()
-        move_a = (12, 28, 0)
-        move_b = (8, 16, 0)
+        move_a = encode_move(E2, E4, QUIET)
 
         update_killers(killers, move_a, 0)
+
         assert killers[0][0] == move_a
         assert killers[0][1] is None
 
+    def test_shift_on_new_killer(self) -> None:
+        """New killer shifts old [0] to [1]."""
+        killers = create_killer_table()
+        move_a = encode_move(E2, E4, QUIET)
+        move_b = encode_move(A2, A3, QUIET)
+
+        update_killers(killers, move_a, 0)
         update_killers(killers, move_b, 0)
+
         assert killers[0][0] == move_b
         assert killers[0][1] == move_a
 
     def test_same_killer_not_duplicated(self) -> None:
         """Inserting the same move again does not shift."""
         killers = create_killer_table()
-        move_a = (12, 28, 0)
-        move_b = (8, 16, 0)
+        move_a = encode_move(E2, E4, QUIET)
+        move_b = encode_move(A2, A3, QUIET)
 
         update_killers(killers, move_a, 0)
         update_killers(killers, move_b, 0)
@@ -148,10 +184,10 @@ class TestUpdateKillers:
         assert killers[0][1] == move_a
 
     def test_killers_independent_per_depth(self) -> None:
-        """Killer moves at different depths are independent."""
+        """Killers at different depths don't interfere."""
         killers = create_killer_table()
-        move_a = (12, 28, 0)
-        move_b = (8, 16, 0)
+        move_a = encode_move(E2, E4, QUIET)
+        move_b = encode_move(A2, A3, QUIET)
 
         update_killers(killers, move_a, 0)
         update_killers(killers, move_b, 3)
@@ -161,78 +197,33 @@ class TestUpdateKillers:
         assert killers[1][0] is None
 
 
-class TestOrderCapturesOnly:
-    def test_order_captures_only(self) -> None:
-        """order_captures returns only captures, sorted by MVV-LVA."""
-        board = _make_board()
-        board.squares[27] = W_PAWN
-        board.squares[36] = B_QUEEN
-        board.squares[18] = W_KNIGHT
-        board.squares[35] = B_PAWN
-        board.squares[12] = W_PAWN
+# ------------------------------------------------ order_captures standalone
+class TestOrderCaptures:
+    def test_captures_sorted_by_mvv_lva(self) -> None:
+        """order_captures sorts by MVV-LVA, higher victim first."""
+        board = Board("4k3/8/8/3qp3/3PN3/8/8/4K3 w - - 0 1")
+        pxq = encode_move(D4, D5, CAPTURE)
+        nxp = encode_move(E4, E5, CAPTURE)
 
-        pawn_takes_queen = (27, 36, 0)
-        knight_takes_pawn = (18, 35, 0)
-        quiet = (12, 20, 0)
+        moves = [nxp, pxq]
+        order_captures(moves, board)
 
-        result = order_captures(
-            [quiet, knight_takes_pawn, pawn_takes_queen], board
-        )
-
-        assert len(result) == 2
-        assert result[0] == pawn_takes_queen
-        assert result[1] == knight_takes_pawn
-
-    def test_no_captures_returns_empty(self) -> None:
-        """order_captures with no captures returns empty list."""
-        board = _make_board()
-        board.squares[12] = W_PAWN
-        result = order_captures([(12, 20, 0)], board)
-        assert result == []
+        assert moves[0] == pxq
+        assert moves[1] == nxp
 
 
-class TestEnPassantCapture:
-    def test_en_passant_capture(self) -> None:
-        """En passant is counted as a capture with pawn victim."""
-        board = _make_board()
-        # White pawn on e5 (sq 36), black pawn just double-pushed to d5 (sq 35)
-        # ep_square = d6 (sq 43)
-        board.squares[36] = W_PAWN
-        board.squares[35] = B_PAWN
-        board.ep_square = 43
+# ------------------------------------------------ en passant
+class TestEnPassant:
+    def test_ep_capture_treated_as_capture(self) -> None:
+        """En passant is ordered as a capture (before quiet moves)."""
+        board = Board("4k3/8/8/4Pp2/8/8/P7/4K3 w - f6 0 1")
+        # White pawn e5=36, en passant target f6=45
+        ep = encode_move(E5, 45, EP_CAPTURE)
+        quiet = encode_move(A2, A3, QUIET)
 
-        ep_move = (36, 43, 0)  # pawn captures en passant
-        assert _is_capture(ep_move, board) is True
-
-    def test_en_passant_in_ordering(self) -> None:
-        """En passant capture is ordered before quiet moves."""
-        board = _make_board()
-        board.squares[36] = W_PAWN
-        board.squares[35] = B_PAWN
-        board.squares[12] = W_PAWN
-        board.ep_square = 43
-
-        ep_move = (36, 43, 0)
-        quiet = (12, 20, 0)
-
+        moves = [quiet, ep]
         killers = create_killer_table()
-        ordered = order_moves([quiet, ep_move], board, killers, 0)
+        order_moves(moves, board, killers, 0)
 
-        assert ordered[0] == ep_move
-        assert ordered[1] == quiet
-
-    def test_en_passant_in_order_captures(self) -> None:
-        """En passant appears in order_captures results."""
-        board = _make_board()
-        board.squares[36] = W_PAWN
-        board.squares[35] = B_PAWN
-        board.ep_square = 43
-
-        ep_move = (36, 43, 0)
-        quiet = (12, 20, 0)
-        board.squares[12] = W_PAWN
-
-        result = order_captures([quiet, ep_move], board)
-
-        assert len(result) == 1
-        assert result[0] == ep_move
+        assert moves[0] == ep
+        assert moves[1] == quiet
