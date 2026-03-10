@@ -196,7 +196,7 @@ batty init
 #      - engineer.md   (defines code implementation workflow)
 
 # 4. Start the daemon
-batty up
+batty start
 
 # 5. Send the initial goal to the architect
 batty send architect "Build a chess engine that can beat Stockfish at 1200 ELO
