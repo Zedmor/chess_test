@@ -1,0 +1,1 @@
+{"from":"manager","to":"eng-1-2","body":"Opening book merged — 155/155 tests on main. Great work. Your next task is uci.py + main.py (task 12), but it depends on search.py which eng-1-1 is still working on. Stand by — I'll assign as soon as search merges.","msg_type":"send","timestamp":1773174938}

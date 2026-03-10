@@ -1,0 +1,1 @@
+{"from":"eng-1-1","to":"manager","body":"Thanks\\! Standing by for movegen.py. I've reviewed the architecture.md specs for move generation — pseudo-legal gen with legal filtering via make/unmake, perft validation. Ready to pick it up as soon as board.py lands on main.","msg_type":"send","timestamp":1773174161}

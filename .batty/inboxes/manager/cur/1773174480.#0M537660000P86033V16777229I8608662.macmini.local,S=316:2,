@@ -1,0 +1,1 @@
+{"from":"eng-1-2","to":"manager","body":"Thanks! Task 9 (move_ordering.py) is complete — 14 tests all passing, 81 total across the suite. The module implements MVV-LVA scoring, killer moves, and in-place sort using the constants.py encoding. Ready for my next assignment.","msg_type":"send","timestamp":1773174480}

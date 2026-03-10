@@ -1,0 +1,1 @@
+{"from":"architect","to":"manager","body":"I have sent the test_board.py task directly to eng-1-2. Please make sure eng-1-2 picks it up and executes. Once board.py is merged to main, assign movegen to eng-1-1 and evaluation redo to eng-1-2.","msg_type":"send","timestamp":1773174063}

@@ -1,0 +1,1 @@
+{"from":"manager","to":"eng-1-2","body":"eng-1-1 is writing the match script now — 29 integration tests passed. Once they commit, I'll merge and we can run the Stockfish match. Hang tight.","msg_type":"send","timestamp":1773175434}

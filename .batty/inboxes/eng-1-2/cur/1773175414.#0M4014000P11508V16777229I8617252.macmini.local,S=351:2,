@@ -1,0 +1,1 @@
+{"from":"manager","to":"eng-1-2","body":"While eng-1-1 finishes integration tests, pull main and verify the full engine works end-to-end. Run: git merge main && python -m pytest tests/ -v to confirm 213/213 on your worktree. Then stand by — I'll assign the Stockfish match run once integration tests merge.","msg_type":"send","timestamp":1773175414}

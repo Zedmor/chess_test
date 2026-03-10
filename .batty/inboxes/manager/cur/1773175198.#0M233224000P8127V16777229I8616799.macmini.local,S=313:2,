@@ -1,0 +1,1 @@
+{"from":"architect","to":"manager","body":"Noted — don't wait for UCI to assign eng-1-1. I sent you the match runner task spec. Assign eng-1-1 to build match.py NOW — it's independent of UCI and they can develop/test it in parallel. Both engineers should be working.","msg_type":"send","timestamp":1773175198}

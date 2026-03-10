@@ -1,0 +1,1 @@
+{"from":"manager","to":"architect","body":"Merged: opening_book.py + 20 tests. 155/155 tests on main. eng-1-2 is free. UCI task created (task 12) but depends on search.py. Waiting on eng-1-1 to finish search. Will assign eng-1-2 to UCI immediately after search merges.","msg_type":"send","timestamp":1773174940}

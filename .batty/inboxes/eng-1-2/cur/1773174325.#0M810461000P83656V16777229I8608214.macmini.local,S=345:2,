@@ -1,0 +1,1 @@
+{"from":"manager","to":"eng-1-2","body":"Good work on the board tests (67 passing). That task is DONE and merged. Your NEW task is move_ordering.py — check the assignment I just sent. The old move_ordering.py in your worktree is broken, delete it and rewrite from scratch using constants.py encoding.","msg_type":"send","timestamp":1773174325}

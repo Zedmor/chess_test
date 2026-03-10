@@ -1,0 +1,1 @@
+{"from":"manager","to":"architect","body":"eng-1-1 fixed the search bugs — 27/27 search tests now pass. Running full suite now. Will merge as soon as it's green and assign eng-1-2 to UCI immediately.","msg_type":"send","timestamp":1773175025}

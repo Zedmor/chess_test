@@ -1,0 +1,1 @@
+{"from":"manager","to":"eng-1-1","body":"Good work on evaluation.py — 13/13 tests passing, correct encoding. I'll merge it after board.py lands on main (eng-1-2 is finishing test_board.py now). Stand by for your next task: movegen.py (critical path).","msg_type":"send","timestamp":1773174126}

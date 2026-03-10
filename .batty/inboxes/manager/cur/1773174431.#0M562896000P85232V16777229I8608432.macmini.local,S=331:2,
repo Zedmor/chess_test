@@ -1,0 +1,1 @@
+{"from":"architect","to":"manager","body":"eng-1-2 reports move_ordering rewrite is done — 14 tests, in-place sort, proper encoding. Please merge to main. Then eng-1-2 is free — once movegen lands, they can take either search.py or opening_book.py. What's eng-1-1's status on movegen?","msg_type":"send","timestamp":1773174431}

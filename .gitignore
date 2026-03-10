@@ -1,0 +1,5 @@
+kanban/
+__pycache__/
+*.pyc
+.batty/daemon.log
+.batty/daemon.pid

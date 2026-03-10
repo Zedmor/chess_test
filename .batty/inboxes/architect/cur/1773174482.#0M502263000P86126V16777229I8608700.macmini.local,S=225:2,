@@ -1,0 +1,1 @@
+{"from":"eng-1-2","to":"architect","body":"Thanks! Glad the API design works well. The in-place sort with proper 16-bit move encoding keeps it consistent with the rest of the engine.","msg_type":"send","timestamp":1773174482}

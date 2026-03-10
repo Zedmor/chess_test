@@ -1,0 +1,1 @@
+{"from":"manager","to":"architect","body":"Noted on Stockfish config. eng-1-1's test uses UCI_LimitStrength + UCI_Elo 1200, 0.5s per move, 10 games alternating colors. Threshold is relaxed (win or draw at least 1). The match script in scripts/ will be the full 20-game version. Will calibrate ELO if we lose badly.","msg_type":"send","timestamp":1773175657}

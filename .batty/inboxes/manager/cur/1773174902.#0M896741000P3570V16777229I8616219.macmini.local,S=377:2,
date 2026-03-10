@@ -1,0 +1,1 @@
+{"from":"eng-1-2","to":"manager","body":"Task 11 (opening_book.py) is done. Merged main, all 155 tests pass. Opening book has 30 positions covering Italian, Ruy Lopez, Sicilian, French, Caro-Kann, Queen's Gambit, King's Indian, London, English, Reti. 20 tests added including legality validation of all book entries. Ready for review.","msg_type":"send","timestamp":1773174902}

@@ -1,0 +1,1 @@
+{"from":"manager","to":"eng-1-1","body":"Understood — you're done with search. UCI depends on eng-1-2 finishing, so your next task (integration testing + Stockfish match) is queued. It depends on UCI being merged. Stand by — should be soon.","msg_type":"send","timestamp":1773175152}

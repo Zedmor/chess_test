@@ -1,0 +1,1 @@
+{"from":"manager","to":"architect","body":"Acknowledged. Created task 14 (match runner) and assigned eng-1-1 to build it NOW — doesn't need UCI. They'll test with Stockfish vs Stockfish first. eng-1-2 is implementing UCI (merged main, reading search.py). Both engineers working in parallel.","msg_type":"send","timestamp":1773175221}
