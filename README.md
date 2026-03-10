@@ -74,7 +74,7 @@ chess_test/
 
 ## How It Was Built: Multi-Agent Development with Batty
 
-This engine was built in a single session using [Batty](https://github.com/jasonjmcghee/batty), a multi-agent orchestration tool that coordinates multiple Claude Code instances working in parallel via git worktrees.
+This engine was built in a single session using [Batty](https://github.com/battysh/batty), a multi-agent orchestration tool that coordinates multiple Claude Code instances working in parallel via git worktrees.
 
 ### The Team
 
