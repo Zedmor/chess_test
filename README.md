@@ -161,6 +161,58 @@ Iterative Deepening
 | Opening Book | 20 | All 8 opening lines, FEN-based lookup, legal move validation |
 | Move Ordering | 14 | MVV-LVA scoring, killer moves, in-place sort |
 
+## Reproduce It Yourself
+
+Want to watch AI agents build this engine from scratch? You just need [Batty](https://github.com/battysh/batty), [Claude Code](https://docs.anthropic.com/en/docs/claude-code), and Stockfish installed.
+
+### Prerequisites
+
+```bash
+# Install Batty
+npm install -g @battysh/batty
+
+# Install Stockfish (macOS)
+brew install stockfish
+
+# Install test runner
+pip install pytest
+```
+
+### Steps
+
+```bash
+# 1. Create empty project
+mkdir chess-engine && cd chess-engine
+git init
+
+# 2. Initialize Batty team (architect + manager + 2 engineers)
+batty init
+
+# 3. Copy the team config files into .batty/team_config/
+#    These define each agent's role and behavior.
+#    You can find them in this repo under .batty/team_config/:
+#      - architect.md  (defines roadmap/architecture ownership)
+#      - manager.md    (defines task breakdown, assignment, merging)
+#      - engineer.md   (defines code implementation workflow)
+
+# 4. Start the daemon
+batty up
+
+# 5. Send the initial goal to the architect
+batty send architect "Build a chess engine that can beat Stockfish at 1200 ELO
+at least 50% of the time. Do not use the internet other than download stockfish.
+Do not install any libraries/packages - whatever language you use for this, you
+implement it without any external code. Only package you need to install/use is
+stockfish for testing against."
+
+# 6. Watch the agents work
+batty logs
+```
+
+The architect will create the architecture and roadmap, send directives to the manager, who will break them into tasks and assign them to engineers working in parallel git worktrees. The full build takes roughly 30-45 minutes.
+
+The team config files (`.batty/team_config/*.md`) and the initial prompt (`batty send architect "..."`) are all you need — the agents figure out the rest autonomously.
+
 ## License
 
 MIT
